@@ -152,6 +152,10 @@ const authConfig = window.VYBE_AUTH_CONFIG || {};
 const supabaseFactory = window.supabase;
 const supabasePublicKey =
   authConfig.supabaseAnonKey || authConfig.supabasePublishableKey || "";
+const oauthRedirectUrl =
+  typeof authConfig.redirectUrl === "string" && authConfig.redirectUrl.startsWith("http")
+    ? authConfig.redirectUrl
+    : `${window.location.origin}${window.location.pathname}`;
 
 const getDisplayName = (user) => {
   const metadata = user.user_metadata || {};
@@ -236,7 +240,7 @@ if (canInitAuth) {
       const { error } = await supabaseClient.auth.signInWithOAuth({
         provider: "discord",
         options: {
-          redirectTo: window.location.href
+          redirectTo: oauthRedirectUrl
         }
       });
 
