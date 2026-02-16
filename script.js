@@ -148,14 +148,32 @@ if (supportsFinePointer) {
 
 const authButton = document.getElementById("discord-login-btn");
 const authUserLabel = document.getElementById("auth-user-label");
+const authControls = document.querySelector(".auth-controls");
 const authConfig = window.VYBE_AUTH_CONFIG || {};
 const supabaseFactory = window.supabase;
 const supabasePublicKey =
   authConfig.supabaseAnonKey || authConfig.supabasePublishableKey || "";
-const oauthRedirectUrl =
-  typeof authConfig.redirectUrl === "string" && authConfig.redirectUrl.startsWith("http")
-    ? authConfig.redirectUrl
-    : `${window.location.origin}${window.location.pathname}`;
+const defaultProdRedirectUrl = "https://www.vybevault.store/";
+const oauthRedirectUrl = (() => {
+  if (typeof authConfig.redirectUrl === "string" && authConfig.redirectUrl.startsWith("http")) {
+    return authConfig.redirectUrl;
+  }
+  if (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1") {
+    return `${window.location.origin}${window.location.pathname}`;
+  }
+  return defaultProdRedirectUrl;
+})();
+
+let authAvatar = document.getElementById("auth-user-avatar");
+if (!authAvatar && authControls) {
+  authAvatar = document.createElement("img");
+  authAvatar.id = "auth-user-avatar";
+  authAvatar.className = "auth-avatar hidden";
+  authAvatar.alt = "Discord profile avatar";
+  authAvatar.loading = "lazy";
+  authAvatar.referrerPolicy = "no-referrer";
+  authControls.insertBefore(authAvatar, authUserLabel || authButton || null);
+}
 
 const getDisplayName = (user) => {
   const metadata = user.user_metadata || {};
@@ -169,6 +187,16 @@ const getDisplayName = (user) => {
   );
 };
 
+const getAvatarUrl = (user) => {
+  const metadata = user.user_metadata || {};
+  return (
+    metadata.avatar_url ||
+    metadata.picture ||
+    metadata.avatar ||
+    null
+  );
+};
+
 const updateAuthUi = (session, isReady) => {
   if (!authButton || !authUserLabel) {
     return;
@@ -178,18 +206,36 @@ const updateAuthUi = (session, isReady) => {
     authButton.disabled = true;
     authButton.textContent = "loading...";
     authUserLabel.textContent = "checking session...";
+    if (authAvatar) {
+      authAvatar.classList.add("hidden");
+      authAvatar.removeAttribute("src");
+    }
     return;
   }
 
   authButton.disabled = false;
   if (session?.user) {
+    const avatarUrl = getAvatarUrl(session.user);
     authButton.textContent = "logout";
     authUserLabel.textContent = getDisplayName(session.user);
+    if (authAvatar) {
+      if (avatarUrl) {
+        authAvatar.src = avatarUrl;
+        authAvatar.classList.remove("hidden");
+      } else {
+        authAvatar.classList.add("hidden");
+        authAvatar.removeAttribute("src");
+      }
+    }
     return;
   }
 
   authButton.textContent = "login with Discord";
   authUserLabel.textContent = "signed out";
+  if (authAvatar) {
+    authAvatar.classList.add("hidden");
+    authAvatar.removeAttribute("src");
+  }
 };
 
 const canInitAuth =
