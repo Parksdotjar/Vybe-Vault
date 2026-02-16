@@ -1,0 +1,79 @@
+﻿<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Pricing | VYBE VAULT</title>
+  <meta name="description" content="Membership pricing for VYBE VAULT assets." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="bg-grid" aria-hidden="true"></div>
+
+  <header class="site-header">
+    <a class="brand" href="index.html">VYBE VAULT</a>
+    <nav>
+      <a href="index.html">home</a>
+      <a href="pricing.html" class="active">pricing</a>
+      <a href="tos.html">tos</a>
+      <a href="privacy-policy.html">privacy</a>
+    </nav>
+  </header>
+
+  <main>
+    <section class="section page-hero">
+      <p class="hero-kicker reveal">plans and access</p>
+      <h1 class="reveal">choose your creator tier</h1>
+      <p class="hero-copy reveal">Scale your editing workflow with monthly studio assets and member perks.</p>
+    </section>
+
+    <section class="section pricing-wrap">
+      <div class="pricing-grid">
+        <article class="price-card reveal">
+          <h3>Creator</h3>
+          <p class="price"><span>$5</span>/month</p>
+          <ul>
+            <li>Monthly asset drops</li>
+            <li>Basic editing packs</li>
+            <li>Member-only updates</li>
+          </ul>
+          <button class="btn btn-ghost full" data-plan="Creator">choose Creator</button>
+        </article>
+
+        <article class="price-card featured reveal">
+          <p class="badge">recommended</p>
+          <h3>Creator+</h3>
+          <p class="price"><span>$10</span>/month</p>
+          <ul>
+            <li>Everything in Creator</li>
+            <li>Exclusive premium packs</li>
+            <li>Early access releases</li>
+          </ul>
+          <button class="btn btn-primary full" data-plan="Creator+">choose Creator+</button>
+        </article>
+
+        <article class="price-card reveal">
+          <h3>Creator++</h3>
+          <p class="price"><span>$25</span>/month</p>
+          <ul>
+            <li>Everything in Creator+</li>
+            <li>Access to full project files</li>
+            <li>Custom help discord access</li>
+          </ul>
+          <button class="btn btn-ghost full" data-plan="Creator++">choose Creator++</button>
+        </article>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <p>&copy; <span id="year"></span> VYBE VAULT. all rights reserved.</p>
+  </footer>
+
+  <script src="script.js"></script>
+</body>
+</html>
+
