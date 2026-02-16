@@ -150,6 +150,8 @@ const authButton = document.getElementById("discord-login-btn");
 const authUserLabel = document.getElementById("auth-user-label");
 const authConfig = window.VYBE_AUTH_CONFIG || {};
 const supabaseFactory = window.supabase;
+const supabasePublicKey =
+  authConfig.supabaseAnonKey || authConfig.supabasePublishableKey || "";
 
 const getDisplayName = (user) => {
   const metadata = user.user_metadata || {};
@@ -190,8 +192,8 @@ const canInitAuth =
   typeof supabaseFactory?.createClient === "function" &&
   typeof authConfig.supabaseUrl === "string" &&
   authConfig.supabaseUrl.includes("supabase.co") &&
-  typeof authConfig.supabaseAnonKey === "string" &&
-  authConfig.supabaseAnonKey.length > 20;
+  typeof supabasePublicKey === "string" &&
+  supabasePublicKey.length > 20;
 
 if (authButton || authUserLabel) {
   updateAuthUi(null, false);
@@ -200,7 +202,7 @@ if (authButton || authUserLabel) {
 if (canInitAuth) {
   const supabaseClient = supabaseFactory.createClient(
     authConfig.supabaseUrl,
-    authConfig.supabaseAnonKey
+    supabasePublicKey
   );
 
   const refreshAuthUi = async () => {
