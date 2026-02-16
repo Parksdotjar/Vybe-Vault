@@ -145,3 +145,110 @@ if (supportsFinePointer) {
     true
   );
 }
+
+const authButton = document.getElementById("discord-login-btn");
+const authUserLabel = document.getElementById("auth-user-label");
+const authConfig = window.VYBE_AUTH_CONFIG || {};
+const supabaseFactory = window.supabase;
+
+const getDisplayName = (user) => {
+  const metadata = user.user_metadata || {};
+  return (
+    metadata.full_name ||
+    metadata.preferred_username ||
+    metadata.user_name ||
+    metadata.name ||
+    user.email ||
+    "discord user"
+  );
+};
+
+const updateAuthUi = (session, isReady) => {
+  if (!authButton || !authUserLabel) {
+    return;
+  }
+
+  if (!isReady) {
+    authButton.disabled = true;
+    authButton.textContent = "loading...";
+    authUserLabel.textContent = "checking session...";
+    return;
+  }
+
+  authButton.disabled = false;
+  if (session?.user) {
+    authButton.textContent = "logout";
+    authUserLabel.textContent = getDisplayName(session.user);
+    return;
+  }
+
+  authButton.textContent = "login with Discord";
+  authUserLabel.textContent = "signed out";
+};
+
+const canInitAuth =
+  typeof supabaseFactory?.createClient === "function" &&
+  typeof authConfig.supabaseUrl === "string" &&
+  authConfig.supabaseUrl.includes("supabase.co") &&
+  typeof authConfig.supabaseAnonKey === "string" &&
+  authConfig.supabaseAnonKey.length > 20;
+
+if (authButton || authUserLabel) {
+  updateAuthUi(null, false);
+}
+
+if (canInitAuth) {
+  const supabaseClient = supabaseFactory.createClient(
+    authConfig.supabaseUrl,
+    authConfig.supabaseAnonKey
+  );
+
+  const refreshAuthUi = async () => {
+    const { data, error } = await supabaseClient.auth.getSession();
+    if (error) {
+      console.error("Failed to load auth session:", error.message);
+      updateAuthUi(null, true);
+      return null;
+    }
+    updateAuthUi(data.session, true);
+    return data.session;
+  };
+
+  supabaseClient.auth.onAuthStateChange((_event, session) => {
+    updateAuthUi(session, true);
+  });
+
+  refreshAuthUi();
+
+  if (authButton) {
+    authButton.addEventListener("click", async () => {
+      const { data } = await supabaseClient.auth.getSession();
+      if (data.session) {
+        const { error } = await supabaseClient.auth.signOut();
+        if (error) {
+          console.error("Logout failed:", error.message);
+        }
+        return;
+      }
+
+      const { error } = await supabaseClient.auth.signInWithOAuth({
+        provider: "discord",
+        options: {
+          redirectTo: window.location.href
+        }
+      });
+
+      if (error) {
+        console.error("Discord login failed:", error.message);
+      }
+    });
+  }
+} else if (authButton || authUserLabel) {
+  updateAuthUi(null, true);
+
+  if (authButton) {
+    authButton.addEventListener("click", () => {
+      alert("Set your Supabase URL and anon key in auth-config.js to enable Discord login.");
+    });
+  }
+}

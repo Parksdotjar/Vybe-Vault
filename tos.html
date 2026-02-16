@@ -21,6 +21,10 @@
       <a href="tos.html" class="active">tos</a>
       <a href="privacy-policy.html">privacy</a>
     </nav>
+    <div class="auth-controls">
+      <span class="auth-label" id="auth-user-label" aria-live="polite">signed out</span>
+      <button class="btn btn-ghost auth-btn" id="discord-login-btn" type="button">login with Discord</button>
+    </div>
   </header>
 
   <main>
@@ -59,6 +63,8 @@
     <p>&copy; <span id="year"></span> VYBE VAULT. all rights reserved.</p>
   </footer>
 
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="auth-config.js"></script>
   <script src="script.js"></script>
 </body>
 </html>
