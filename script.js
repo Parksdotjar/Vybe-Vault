@@ -197,6 +197,20 @@ const getAvatarUrl = (user) => {
   );
 };
 
+const withTimeout = async (promise, timeoutMs, label) => {
+  let timeoutId;
+  const timeoutPromise = new Promise((_, reject) => {
+    timeoutId = setTimeout(() => {
+      reject(new Error(`${label} timed out`));
+    }, timeoutMs);
+  });
+  try {
+    return await Promise.race([promise, timeoutPromise]);
+  } finally {
+    clearTimeout(timeoutId);
+  }
+};
+
 const getAdminStatus = async (supabaseClient, userId) => {
   if (!supabaseClient || !userId) {
     return false;
@@ -272,18 +286,31 @@ if (canInitAuth) {
     supabasePublicKey
   );
 
+  let didResolveInitialAuth = false;
+
   const refreshAuthUi = async () => {
-    const { data, error } = await supabaseClient.auth.getSession();
-    if (error) {
-      console.error("Failed to load auth session:", error.message);
+    try {
+      const { data, error } = await withTimeout(
+        supabaseClient.auth.getSession(),
+        9000,
+        "getSession"
+      );
+      if (error) {
+        console.error("Failed to load auth session:", error.message);
+        updateAuthUi(null, true);
+        return null;
+      }
+      const isAdmin = data.session?.user
+        ? await getAdminStatus(supabaseClient, data.session.user.id)
+        : false;
+      updateAuthUi(data.session, true, isAdmin);
+      didResolveInitialAuth = true;
+      return data.session;
+    } catch (error) {
+      console.error("Auth initialization failed:", error.message);
       updateAuthUi(null, true);
       return null;
     }
-    const isAdmin = data.session?.user
-      ? await getAdminStatus(supabaseClient, data.session.user.id)
-      : false;
-    updateAuthUi(data.session, true, isAdmin);
-    return data.session;
   };
 
   supabaseClient.auth.onAuthStateChange(async (_event, session) => {
@@ -291,9 +318,17 @@ if (canInitAuth) {
       ? await getAdminStatus(supabaseClient, session.user.id)
       : false;
     updateAuthUi(session, true, isAdmin);
+    didResolveInitialAuth = true;
   });
 
   refreshAuthUi();
+
+  // Prevent indefinite "loading..." if the auth request stalls.
+  setTimeout(() => {
+    if (!didResolveInitialAuth) {
+      updateAuthUi(null, true);
+    }
+  }, 10000);
 
   if (authButton) {
     authButton.addEventListener("click", async () => {

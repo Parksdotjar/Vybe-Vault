@@ -32,6 +32,20 @@ let isAdmin = false;
 let activeTag = "all";
 let allAssets = [];
 
+const withTimeout = async (promise, timeoutMs, label) => {
+  let timeoutId;
+  const timeoutPromise = new Promise((_, reject) => {
+    timeoutId = setTimeout(() => {
+      reject(new Error(`${label} timed out`));
+    }, timeoutMs);
+  });
+  try {
+    return await Promise.race([promise, timeoutPromise]);
+  } finally {
+    clearTimeout(timeoutId);
+  }
+};
+
 const toSlug = (value) =>
   value
     .toLowerCase()
@@ -69,11 +83,23 @@ const getUserTier = async () => {
     return null;
   }
 
-  const { data, error } = await supabaseClient
-    .from("entitlements")
-    .select("plan,status,current_period_end")
-    .eq("user_id", currentSession.user.id)
-    .maybeSingle();
+  let data;
+  let error;
+  try {
+    const result = await withTimeout(
+      supabaseClient
+        .from("entitlements")
+        .select("plan,status,current_period_end")
+        .eq("user_id", currentSession.user.id)
+        .maybeSingle(),
+      8000,
+      "tier query"
+    );
+    data = result.data;
+    error = result.error;
+  } catch (_err) {
+    return null;
+  }
 
   if (error || !data) {
     return null;
@@ -97,11 +123,23 @@ const getAdminStatus = async () => {
     return false;
   }
 
-  const { data, error } = await supabaseClient
-    .from("site_admins")
-    .select("user_id")
-    .eq("user_id", currentSession.user.id)
-    .maybeSingle();
+  let data;
+  let error;
+  try {
+    const result = await withTimeout(
+      supabaseClient
+        .from("site_admins")
+        .select("user_id")
+        .eq("user_id", currentSession.user.id)
+        .maybeSingle(),
+      8000,
+      "admin check"
+    );
+    data = result.data;
+    error = result.error;
+  } catch (_err) {
+    return false;
+  }
 
   if (error) {
     return false;
@@ -219,10 +257,23 @@ const loadAssets = async () => {
   }
   setStatus("Loading assets...");
 
-  const { data, error } = await supabaseClient
-    .from("assets")
-    .select("id,title,description,required_tier,tags,storage_object_path,is_published,created_at")
-    .order("created_at", { ascending: false });
+  let data;
+  let error;
+  try {
+    const result = await withTimeout(
+      supabaseClient
+        .from("assets")
+        .select("id,title,description,required_tier,tags,storage_object_path,is_published,created_at")
+        .order("created_at", { ascending: false }),
+      9000,
+      "assets query"
+    );
+    data = result.data;
+    error = result.error;
+  } catch (_err) {
+    setStatus("Could not load assets (timeout).");
+    return;
+  }
 
   if (error) {
     setStatus("Could not load assets.");
@@ -314,8 +365,16 @@ const initAssetsPage = async () => {
     supabasePublicKey
   );
 
-  const { data } = await supabaseClient.auth.getSession();
-  currentSession = data?.session || null;
+  try {
+    const { data } = await withTimeout(
+      supabaseClient.auth.getSession(),
+      9000,
+      "auth session"
+    );
+    currentSession = data?.session || null;
+  } catch (_err) {
+    currentSession = null;
+  }
   currentUserTier = await getUserTier();
   isAdmin = await getAdminStatus();
 
