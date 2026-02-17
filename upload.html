@@ -12,7 +12,7 @@
 </head>
 <body>
   <div id="build-counter" style="position:fixed;top:10px;right:10px;padding:6px 10px;border-radius:999px;border:1px solid rgba(255,255,255,0.2);background:rgba(7,10,16,0.85);color:#cfd7e6;font:12px/1 'Space Grotesk',sans-serif;letter-spacing:0.04em;z-index:9999;">
-    BUILD v25
+    BUILD v26
   </div>
   <div class="bg-grid" aria-hidden="true"></div>
 
@@ -95,7 +95,7 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="auth-config.js"></script>
-  <script src="script.js?v=25"></script>
+  <script src="script.js?v=26"></script>
   <script>
     (() => {
     window.__uploadScriptLoaded = true;
@@ -245,6 +245,33 @@
       return { ok: true };
     };
 
+    const uploadViaRestFallback = async (objectPath, file) => {
+      const { data } = await supabaseClient.auth.getSession();
+      const token = data?.session?.access_token;
+      if (!token) {
+        throw new Error("No access token for fallback upload.");
+      }
+
+      const supabaseUrl = authConfig.supabaseUrl.replace(/\/+$/, "");
+      const pathParts = objectPath.split("/").map(encodeURIComponent).join("/");
+      const endpoint = `${supabaseUrl}/storage/v1/object/asset-files/${pathParts}`;
+      const response = await fetch(endpoint, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          apikey: supabasePublicKey,
+          "Content-Type": file.type || "application/octet-stream",
+          "x-upsert": "false"
+        },
+        body: file
+      });
+
+      if (!response.ok) {
+        const bodyText = await response.text();
+        throw new Error(`Fallback upload failed (${response.status}): ${bodyText}`);
+      }
+    };
+
     const handleUploadSubmit = async () => {
       if (!uploadStatus) {
         return;
@@ -304,7 +331,12 @@
 
         clearInterval(progressTimer);
         if (uploadResult.error) {
-          throw new Error(uploadResult.error.message || "Storage upload failed.");
+          if (/aborted/i.test(uploadResult.error.message || "")) {
+            setOverlay(84, "Switching upload mode...");
+            await uploadViaRestFallback(objectPath, file);
+          } else {
+            throw new Error(uploadResult.error.message || "Storage upload failed.");
+          }
         }
 
         setOverlay(88, "Saving asset record...");
