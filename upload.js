@@ -2,6 +2,7 @@ const authConfig = window.VYBE_AUTH_CONFIG || {};
 const supabaseFactory = window.supabase;
 const supabasePublicKey =
   authConfig.supabaseAnonKey || authConfig.supabasePublishableKey || "";
+window.__uploadScriptLoaded = true;
 
 const uploadForm = document.getElementById("asset-upload-form");
 const uploadStatus = document.getElementById("upload-status");

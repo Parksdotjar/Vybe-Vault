@@ -314,7 +314,7 @@ drop policy if exists "assets_select_published" on public.assets;
 create policy "assets_select_published"
 on public.assets
 for select
-to authenticated
+to public
 using (is_published = true);
 
 drop policy if exists "assets_select_admin_all" on public.assets;
@@ -382,7 +382,10 @@ for select
 to authenticated
 using (
   bucket_id = 'asset-files'
-  and public.can_access_asset(auth.uid(), name)
+  and (
+    public.can_access_asset(auth.uid(), name)
+    or public.is_site_admin(auth.uid())
+  )
 );
 
 drop policy if exists "asset_files_insert_none" on storage.objects;
