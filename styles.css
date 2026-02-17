@@ -154,12 +154,10 @@ body.loading {
 .site-header {
   max-width: var(--max-width);
   margin: 0 auto;
-  padding: 0.85rem 1rem 0.4rem;
+  padding: 0.85rem 1rem 0.5rem;
   display: flex;
-  flex-direction: column;
-  justify-content: flex-start;
   align-items: center;
-  gap: 0.65rem;
+  gap: 1rem;
 }
 
 .brand {
@@ -179,6 +177,7 @@ body.loading {
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.04);
   backdrop-filter: blur(10px);
+  margin-left: 0.7rem;
 }
 
 .site-header nav a {
@@ -201,6 +200,7 @@ body.loading {
   display: flex;
   align-items: center;
   gap: 0.7rem;
+  margin-left: auto;
 }
 
 .auth-avatar {
@@ -605,10 +605,12 @@ h2 {
   }
 
   .site-header {
+    flex-direction: column;
     gap: 0.55rem;
   }
 
   .site-header nav {
+    margin-left: 0;
     gap: 0.5rem;
     padding: 0.35rem;
     flex-wrap: wrap;
@@ -622,6 +624,7 @@ h2 {
 
   .auth-controls {
     width: 100%;
+    margin-left: 0;
     justify-content: center;
     flex-wrap: wrap;
   }
