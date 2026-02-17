@@ -155,7 +155,8 @@ body.loading {
   max-width: var(--max-width);
   margin: 0 auto;
   padding: 0.85rem 1rem 0.5rem;
-  display: flex;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
   align-items: center;
   gap: 1rem;
 }
@@ -167,6 +168,7 @@ body.loading {
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
+  justify-self: start;
 }
 
 .site-header nav {
@@ -177,7 +179,7 @@ body.loading {
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.04);
   backdrop-filter: blur(10px);
-  margin-left: 0.7rem;
+  justify-self: center;
 }
 
 .site-header nav a {
@@ -200,7 +202,7 @@ body.loading {
   display: flex;
   align-items: center;
   gap: 0.7rem;
-  margin-left: auto;
+  justify-self: end;
 }
 
 .auth-avatar {
@@ -593,7 +595,7 @@ h2 {
   }
 }
 
-@media (max-width: 900px) {
+@media (max-width: 700px) {
   .asset-grid,
   .pricing-grid {
     grid-template-columns: 1fr;
@@ -605,6 +607,7 @@ h2 {
   }
 
   .site-header {
+    display: flex;
     flex-direction: column;
     gap: 0.55rem;
   }
