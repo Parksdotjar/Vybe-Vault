@@ -12,7 +12,7 @@
 </head>
 <body>
   <div id="build-counter" style="position:fixed;top:10px;right:10px;padding:6px 10px;border-radius:999px;border:1px solid rgba(255,255,255,0.2);background:rgba(7,10,16,0.85);color:#cfd7e6;font:12px/1 'Space Grotesk',sans-serif;letter-spacing:0.04em;z-index:9999;">
-    BUILD v26
+    BUILD v27
   </div>
   <div class="bg-grid" aria-hidden="true"></div>
 
@@ -95,7 +95,7 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="auth-config.js"></script>
-  <script src="script.js?v=26"></script>
+  <script src="script.js?v=27"></script>
   <script>
     (() => {
     window.__uploadScriptLoaded = true;
@@ -367,8 +367,51 @@
         }, 1500);
       } catch (error) {
         clearInterval(progressTimer);
+        const message = error?.message || "Unknown error";
+        if (/aborted/i.test(message)) {
+          try {
+            setOverlay(84, "Switching upload mode...");
+            await uploadViaRestFallback(objectPath, file);
+
+            setOverlay(88, "Saving asset record...");
+            const insertResult = await supabaseClient
+              .from("assets")
+              .insert({
+                slug,
+                title,
+                description,
+                required_tier: requiredTier,
+                tags,
+                storage_object_path: objectPath,
+                is_published: true
+              });
+
+            if (insertResult.error) {
+              throw new Error(insertResult.error.message || "Asset row insert failed.");
+            }
+
+            setOverlay(100, "Uploaded");
+            uploadStatus.textContent = "Asset uploaded successfully.";
+            uploadForm.reset();
+            setTimeout(() => {
+              closeOverlay();
+              uploadSubmitBtn.disabled = false;
+              uploadStatus.textContent = "";
+            }, 1500);
+            return;
+          } catch (fallbackError) {
+            setOverlay(100, "Upload failed");
+            uploadStatus.textContent = `Upload failed: ${fallbackError.message || "Unknown fallback error"}`;
+            setTimeout(() => {
+              closeOverlay();
+              uploadSubmitBtn.disabled = false;
+            }, 900);
+            return;
+          }
+        }
+
         setOverlay(100, "Upload failed");
-        uploadStatus.textContent = `Upload failed: ${error.message || "Unknown error"}`;
+        uploadStatus.textContent = `Upload failed: ${message}`;
         setTimeout(() => {
           closeOverlay();
           uploadSubmitBtn.disabled = false;
