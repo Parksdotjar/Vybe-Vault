@@ -197,7 +197,24 @@ const getAvatarUrl = (user) => {
   );
 };
 
-const updateAuthUi = (session, isReady) => {
+const getAdminStatus = async (supabaseClient, userId) => {
+  if (!supabaseClient || !userId) {
+    return false;
+  }
+
+  const { data, error } = await supabaseClient
+    .from("site_admins")
+    .select("user_id")
+    .eq("user_id", userId)
+    .maybeSingle();
+
+  if (error) {
+    return false;
+  }
+  return Boolean(data?.user_id);
+};
+
+const updateAuthUi = (session, isReady, isAdmin = false) => {
   if (!authButton || !authUserLabel) {
     return;
   }
@@ -217,7 +234,7 @@ const updateAuthUi = (session, isReady) => {
   if (session?.user) {
     const avatarUrl = getAvatarUrl(session.user);
     authButton.textContent = "logout";
-    authUserLabel.textContent = getDisplayName(session.user);
+    authUserLabel.textContent = `${getDisplayName(session.user)}${isAdmin ? " (admin)" : ""}`;
     if (authAvatar) {
       if (avatarUrl) {
         authAvatar.src = avatarUrl;
@@ -262,12 +279,18 @@ if (canInitAuth) {
       updateAuthUi(null, true);
       return null;
     }
-    updateAuthUi(data.session, true);
+    const isAdmin = data.session?.user
+      ? await getAdminStatus(supabaseClient, data.session.user.id)
+      : false;
+    updateAuthUi(data.session, true, isAdmin);
     return data.session;
   };
 
-  supabaseClient.auth.onAuthStateChange((_event, session) => {
-    updateAuthUi(session, true);
+  supabaseClient.auth.onAuthStateChange(async (_event, session) => {
+    const isAdmin = session?.user
+      ? await getAdminStatus(supabaseClient, session.user.id)
+      : false;
+    updateAuthUi(session, true, isAdmin);
   });
 
   refreshAuthUi();

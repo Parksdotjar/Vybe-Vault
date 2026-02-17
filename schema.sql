@@ -75,20 +75,6 @@ as $$
   );
 $$;
 
-create or replace function public.is_site_admin(p_user_id uuid)
-returns boolean
-language sql
-stable
-security definer
-set search_path = public
-as $$
-  select exists (
-    select 1
-    from public.site_admins sa
-    where sa.user_id = p_user_id
-  );
-$$;
-
 -- ---------- Profile ----------
 create table if not exists public.profiles (
   user_id uuid primary key references auth.users(id) on delete cascade,
@@ -207,13 +193,13 @@ create table if not exists public.assets (
   updated_at timestamptz not null default now()
 );
 
-create index if not exists assets_required_tier_idx on public.assets(required_tier);
-create index if not exists assets_is_published_idx on public.assets(is_published);
-create index if not exists assets_tags_gin_idx on public.assets using gin (tags);
-
 -- Backfill for existing projects where table was created before tags column existed.
 alter table public.assets
   add column if not exists tags text[] not null default '{}'::text[];
+
+create index if not exists assets_required_tier_idx on public.assets(required_tier);
+create index if not exists assets_is_published_idx on public.assets(is_published);
+create index if not exists assets_tags_gin_idx on public.assets using gin (tags);
 
 drop trigger if exists trg_assets_updated_at on public.assets;
 create trigger trg_assets_updated_at
@@ -236,6 +222,20 @@ create table if not exists public.site_admins (
   user_id uuid primary key references auth.users(id) on delete cascade,
   created_at timestamptz not null default now()
 );
+
+create or replace function public.is_site_admin(p_user_id uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select exists (
+    select 1
+    from public.site_admins sa
+    where sa.user_id = p_user_id
+  );
+$$;
 
 -- ---------- RLS ----------
 alter table public.profiles enable row level security;
