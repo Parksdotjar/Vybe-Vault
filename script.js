@@ -224,6 +224,7 @@ const writeAuthCache = (session, isAdmin) => {
     if (session?.user) {
       localStorage.setItem(authCacheKey, JSON.stringify({
         user: {
+          id: session.user.id || null,
           user_metadata: session.user.user_metadata || {},
           email: session.user.email || null
         },
@@ -254,16 +255,24 @@ const getAdminStatus = async (supabaseClient, userId) => {
     return false;
   }
 
-  const { data, error } = await supabaseClient
-    .from("site_admins")
-    .select("user_id")
-    .eq("user_id", userId)
-    .maybeSingle();
+  try {
+    const { data, error } = await withTimeout(
+      supabaseClient
+        .from("site_admins")
+        .select("user_id")
+        .eq("user_id", userId)
+        .maybeSingle(),
+      4500,
+      "admin status"
+    );
 
-  if (error) {
-    return false;
+    if (error) {
+      return null;
+    }
+    return Boolean(data?.user_id);
+  } catch (_error) {
+    return null;
   }
-  return Boolean(data?.user_id);
 };
 
 const updateAuthUi = (session, isReady, isAdmin = false) => {
@@ -337,9 +346,19 @@ if (canInitAuth) {
         updateAuthUi(null, true);
         return null;
       }
-      const isAdmin = data.session?.user
-        ? await getAdminStatus(supabaseClient, data.session.user.id)
-        : false;
+      let isAdmin = false;
+      if (data.session?.user) {
+        const adminResult = await getAdminStatus(supabaseClient, data.session.user.id);
+        if (adminResult === null) {
+          const cached = readAuthCache();
+          const sameUser =
+            (cached?.user?.id && cached.user.id === data.session.user.id) ||
+            (cached?.user?.email && data.session.user.email && cached.user.email === data.session.user.email);
+          isAdmin = sameUser ? Boolean(cached?.isAdmin) : false;
+        } else {
+          isAdmin = adminResult;
+        }
+      }
       currentAuthSession = data.session || null;
       updateAuthUi(data.session, true, isAdmin);
       writeAuthCache(data.session, isAdmin);
@@ -352,9 +371,19 @@ if (canInitAuth) {
   };
 
   supabaseClient.auth.onAuthStateChange(async (_event, session) => {
-    const isAdmin = session?.user
-      ? await getAdminStatus(supabaseClient, session.user.id)
-      : false;
+    let isAdmin = false;
+    if (session?.user) {
+      const adminResult = await getAdminStatus(supabaseClient, session.user.id);
+      if (adminResult === null) {
+        const cached = readAuthCache();
+        const sameUser =
+          (cached?.user?.id && cached.user.id === session.user.id) ||
+          (cached?.user?.email && session.user.email && cached.user.email === session.user.email);
+        isAdmin = sameUser ? Boolean(cached?.isAdmin) : false;
+      } else {
+        isAdmin = adminResult;
+      }
+    }
     currentAuthSession = session || null;
     updateAuthUi(session, true, isAdmin);
     writeAuthCache(session, isAdmin);

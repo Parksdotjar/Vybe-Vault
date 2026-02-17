@@ -12,7 +12,7 @@
 </head>
 <body>
   <div id="build-counter" style="position:fixed;top:10px;right:10px;padding:6px 10px;border-radius:999px;border:1px solid rgba(255,255,255,0.2);background:rgba(7,10,16,0.85);color:#cfd7e6;font:12px/1 'Space Grotesk',sans-serif;letter-spacing:0.04em;z-index:9999;">
-    BUILD v27
+    BUILD v28
   </div>
   <div class="bg-grid" aria-hidden="true"></div>
 
@@ -95,7 +95,7 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="auth-config.js"></script>
-  <script src="script.js?v=27"></script>
+  <script src="script.js?v=28"></script>
   <script>
     (() => {
     window.__uploadScriptLoaded = true;
@@ -225,8 +225,8 @@
         return { ok: false, reason: "Supabase client not ready." };
       }
       const cached = readAuthCache();
-      if (!cached?.isAdmin) {
-        return { ok: false, reason: "This account is not an admin." };
+      if (cached?.isAdmin) {
+        return { ok: true };
       }
 
       if (!currentSession?.user?.id) {
@@ -240,6 +240,15 @@
         } catch (_error) {
           // Keep going; upload call will surface auth errors if session is truly invalid.
         }
+      }
+
+      if (!currentSession?.user?.id) {
+        return { ok: false, reason: "Not signed in." };
+      }
+
+      const isAdmin = await checkAdminAccess(currentSession.user.id);
+      if (!isAdmin) {
+        return { ok: false, reason: "This account is not an admin." };
       }
 
       return { ok: true };
@@ -448,10 +457,10 @@
         }
       );
 
-      const cached = readAuthCache();
-      if (!cached?.isAdmin) {
+      const authCheck = await ensureAuthorizedForUpload();
+      if (!authCheck.ok) {
         if (uploadGateStatus) {
-          uploadGateStatus.textContent = "This account is not an admin.";
+          uploadGateStatus.textContent = authCheck.reason;
         }
         setTimeout(() => redirectToAssets(), 600);
         return;
@@ -460,13 +469,6 @@
       if (uploadGateStatus) {
         uploadGateStatus.textContent = "Admin verified. Ready to upload.";
       }
-
-      // Background refresh only; do not block the page.
-      withTimeout(supabaseClient.auth.getSession(), 1000, "getSession")
-        .then(({ data }) => {
-          currentSession = data?.session || null;
-        })
-        .catch(() => {});
     };
 
     initUploadPage();
