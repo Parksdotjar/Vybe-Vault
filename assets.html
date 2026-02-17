@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Assets | VYBE VAULT</title>
+  <meta name="description" content="Browse and download VYBE VAULT assets by membership tier." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css?v=8" />
+</head>
+<body>
+  <div id="build-counter" style="position:fixed;top:10px;right:10px;padding:6px 10px;border-radius:999px;border:1px solid rgba(255,255,255,0.2);background:rgba(7,10,16,0.85);color:#cfd7e6;font:12px/1 'Space Grotesk',sans-serif;letter-spacing:0.04em;z-index:9999;">
+    BUILD v8
+  </div>
+  <div class="bg-grid" aria-hidden="true"></div>
+
+  <header class="site-header">
+    <a class="brand" href="index.html">VYBE VAULT</a>
+    <nav>
+      <a href="index.html">home</a>
+      <a href="assets.html" class="active">assets</a>
+      <a href="pricing.html">pricing</a>
+      <a href="tos.html">tos</a>
+      <a href="privacy-policy.html">privacy</a>
+    </nav>
+    <div class="auth-controls">
+      <span class="auth-label" id="auth-user-label" aria-live="polite">signed out</span>
+      <button class="btn btn-ghost auth-btn" id="discord-login-btn" type="button">login with Discord</button>
+    </div>
+  </header>
+
+  <main>
+    <section class="section page-hero">
+      <p class="hero-kicker reveal">member library</p>
+      <h1 class="reveal">assets vault</h1>
+      <p class="hero-copy reveal">Search, filter by tags, and download what your tier unlocks.</p>
+    </section>
+
+    <section class="section assets-tools reveal">
+      <div class="assets-toolbar">
+        <input id="asset-search" class="assets-search" type="search" placeholder="Search assets..." />
+        <span class="assets-tier" id="current-tier">tier: signed out</span>
+      </div>
+      <div id="tag-filters" class="tag-filters"></div>
+      <p id="assets-status" class="assets-status">Loading assets...</p>
+    </section>
+
+    <section class="section reveal" id="admin-upload-wrap" hidden>
+      <div class="admin-card">
+        <h2>upload asset</h2>
+        <p class="section-copy">Only site admins can see and use this form.</p>
+        <form id="asset-upload-form" class="upload-form">
+          <label>
+            <span>Title</span>
+            <input id="upload-title" type="text" required />
+          </label>
+          <label>
+            <span>Description</span>
+            <textarea id="upload-description" rows="3" placeholder="Optional"></textarea>
+          </label>
+          <label>
+            <span>Required tier</span>
+            <select id="upload-tier">
+              <option value="creator">Creator</option>
+              <option value="creator_plus">Creator+</option>
+              <option value="creator_plus_plus">Creator++</option>
+            </select>
+          </label>
+          <label>
+            <span>Tags (comma separated)</span>
+            <input id="upload-tags" type="text" placeholder="overlay, transitions, cinematic" />
+          </label>
+          <label>
+            <span>Asset file</span>
+            <input id="upload-file" type="file" required />
+          </label>
+          <label class="publish-toggle">
+            <input id="upload-published" type="checkbox" checked />
+            <span>Publish immediately</span>
+          </label>
+          <button class="btn btn-primary" id="upload-submit-btn" type="submit">upload asset</button>
+        </form>
+        <p id="upload-status" class="assets-status"></p>
+      </div>
+    </section>
+
+    <section class="section">
+      <div id="assets-grid" class="asset-grid"></div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <p>&copy; <span id="year"></span> VYBE VAULT. all rights reserved.</p>
+  </footer>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="auth-config.js"></script>
+  <script src="script.js"></script>
+  <script src="assets.js"></script>
+</body>
+</html>

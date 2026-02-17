@@ -75,6 +75,20 @@ as $$
   );
 $$;
 
+create or replace function public.is_site_admin(p_user_id uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select exists (
+    select 1
+    from public.site_admins sa
+    where sa.user_id = p_user_id
+  );
+$$;
+
 -- ---------- Profile ----------
 create table if not exists public.profiles (
   user_id uuid primary key references auth.users(id) on delete cascade,
@@ -186,6 +200,7 @@ create table if not exists public.assets (
   title text not null,
   description text,
   required_tier public.membership_tier not null default 'creator',
+  tags text[] not null default '{}'::text[],
   storage_object_path text not null unique,
   is_published boolean not null default false,
   created_at timestamptz not null default now(),
@@ -194,6 +209,11 @@ create table if not exists public.assets (
 
 create index if not exists assets_required_tier_idx on public.assets(required_tier);
 create index if not exists assets_is_published_idx on public.assets(is_published);
+create index if not exists assets_tags_gin_idx on public.assets using gin (tags);
+
+-- Backfill for existing projects where table was created before tags column existed.
+alter table public.assets
+  add column if not exists tags text[] not null default '{}'::text[];
 
 drop trigger if exists trg_assets_updated_at on public.assets;
 create trigger trg_assets_updated_at
@@ -211,6 +231,12 @@ create table if not exists public.asset_downloads (
 create index if not exists asset_downloads_user_idx on public.asset_downloads(user_id);
 create index if not exists asset_downloads_asset_idx on public.asset_downloads(asset_id);
 
+-- Site admins can upload/edit assets. Populate this table manually with your user_id.
+create table if not exists public.site_admins (
+  user_id uuid primary key references auth.users(id) on delete cascade,
+  created_at timestamptz not null default now()
+);
+
 -- ---------- RLS ----------
 alter table public.profiles enable row level security;
 alter table public.entitlements enable row level security;
@@ -218,6 +244,7 @@ alter table public.kofi_links enable row level security;
 alter table public.kofi_webhook_events enable row level security;
 alter table public.assets enable row level security;
 alter table public.asset_downloads enable row level security;
+alter table public.site_admins enable row level security;
 
 -- profiles: user can read/write own.
 drop policy if exists "profiles_select_own" on public.profiles;
@@ -290,6 +317,35 @@ for select
 to authenticated
 using (is_published = true);
 
+drop policy if exists "assets_select_admin_all" on public.assets;
+create policy "assets_select_admin_all"
+on public.assets
+for select
+to authenticated
+using (public.is_site_admin(auth.uid()));
+
+drop policy if exists "assets_insert_admin_only" on public.assets;
+create policy "assets_insert_admin_only"
+on public.assets
+for insert
+to authenticated
+with check (public.is_site_admin(auth.uid()));
+
+drop policy if exists "assets_update_admin_only" on public.assets;
+create policy "assets_update_admin_only"
+on public.assets
+for update
+to authenticated
+using (public.is_site_admin(auth.uid()))
+with check (public.is_site_admin(auth.uid()));
+
+drop policy if exists "assets_delete_admin_only" on public.assets;
+create policy "assets_delete_admin_only"
+on public.assets
+for delete
+to authenticated
+using (public.is_site_admin(auth.uid()));
+
 -- downloads: user can insert/read own audit rows.
 drop policy if exists "asset_downloads_select_own" on public.asset_downloads;
 create policy "asset_downloads_select_own"
@@ -304,6 +360,14 @@ on public.asset_downloads
 for insert
 to authenticated
 with check (auth.uid() = user_id);
+
+-- site_admins: users can only read their own admin row.
+drop policy if exists "site_admins_select_own" on public.site_admins;
+create policy "site_admins_select_own"
+on public.site_admins
+for select
+to authenticated
+using (auth.uid() = user_id);
 
 -- ---------- Storage bucket + policies ----------
 insert into storage.buckets (id, name, public)
@@ -321,28 +385,43 @@ using (
   and public.can_access_asset(auth.uid(), name)
 );
 
--- No direct client uploads/deletes in this model.
 drop policy if exists "asset_files_insert_none" on storage.objects;
-create policy "asset_files_insert_none"
+drop policy if exists "asset_files_update_none" on storage.objects;
+drop policy if exists "asset_files_delete_none" on storage.objects;
+
+drop policy if exists "asset_files_insert_admin_only" on storage.objects;
+create policy "asset_files_insert_admin_only"
 on storage.objects
 for insert
 to authenticated
-with check (false);
+with check (
+  bucket_id = 'asset-files'
+  and public.is_site_admin(auth.uid())
+);
 
-drop policy if exists "asset_files_update_none" on storage.objects;
-create policy "asset_files_update_none"
+drop policy if exists "asset_files_update_admin_only" on storage.objects;
+create policy "asset_files_update_admin_only"
 on storage.objects
 for update
 to authenticated
-using (false)
-with check (false);
+using (
+  bucket_id = 'asset-files'
+  and public.is_site_admin(auth.uid())
+)
+with check (
+  bucket_id = 'asset-files'
+  and public.is_site_admin(auth.uid())
+);
 
-drop policy if exists "asset_files_delete_none" on storage.objects;
-create policy "asset_files_delete_none"
+drop policy if exists "asset_files_delete_admin_only" on storage.objects;
+create policy "asset_files_delete_admin_only"
 on storage.objects
 for delete
 to authenticated
-using (false);
+using (
+  bucket_id = 'asset-files'
+  and public.is_site_admin(auth.uid())
+);
 
 -- ---------- Helpful default for new users ----------
 -- Optional: create a default inactive entitlement row for every new user.

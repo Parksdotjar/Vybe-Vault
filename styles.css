@@ -348,6 +348,149 @@ h2 {
   padding-top: 2rem;
 }
 
+.assets-tools {
+  padding-top: 1.2rem;
+}
+
+.assets-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.8rem;
+  flex-wrap: wrap;
+}
+
+.assets-search {
+  background: var(--panel);
+  color: var(--text);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 0.7rem 1rem;
+  width: min(520px, 100%);
+  font: inherit;
+}
+
+.assets-tier {
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.tag-filters {
+  margin-top: 0.9rem;
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.tag-chip {
+  border: 1px solid var(--line);
+  color: var(--muted);
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 999px;
+  padding: 0.35rem 0.7rem;
+  font: inherit;
+  cursor: pointer;
+}
+
+.tag-chip.active {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.assets-status {
+  margin-top: 0.8rem;
+  color: var(--muted);
+}
+
+.admin-card {
+  border: 1px solid var(--line);
+  border-radius: 0.95rem;
+  background: var(--panel);
+  padding: 1.15rem;
+}
+
+.upload-form {
+  margin-top: 1rem;
+  display: grid;
+  gap: 0.8rem;
+}
+
+.upload-form label {
+  display: grid;
+  gap: 0.35rem;
+  color: var(--muted);
+  font-size: 0.92rem;
+}
+
+.upload-form input,
+.upload-form textarea,
+.upload-form select {
+  background: #09090d;
+  color: var(--text);
+  border: 1px solid var(--line);
+  border-radius: 0.65rem;
+  padding: 0.7rem 0.8rem;
+  font: inherit;
+}
+
+.publish-toggle {
+  display: flex !important;
+  align-items: center;
+  gap: 0.55rem !important;
+}
+
+.publish-toggle input {
+  width: 1rem;
+  height: 1rem;
+  margin: 0;
+}
+
+.asset-meta {
+  margin-top: 0.8rem;
+  color: var(--muted);
+  font-size: 0.92rem;
+}
+
+.lock-note,
+.unlock-note {
+  margin-left: 0.5rem;
+  display: inline-block;
+  border-radius: 999px;
+  padding: 0.15rem 0.5rem;
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.lock-note {
+  color: #ffc3c3;
+  background: rgba(255, 87, 87, 0.15);
+}
+
+.unlock-note {
+  color: #c6ffcf;
+  background: rgba(80, 230, 120, 0.13);
+}
+
+.mini-tags {
+  margin-top: 0.7rem;
+  display: flex;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+
+.mini-tag {
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 0.15rem 0.5rem;
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.asset-actions {
+  margin-top: 0.95rem;
+}
+
 .pricing-grid {
   margin-top: 1.5rem;
   display: grid;
