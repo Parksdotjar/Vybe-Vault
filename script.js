@@ -153,6 +153,7 @@ const authConfig = window.VYBE_AUTH_CONFIG || {};
 const supabaseFactory = window.supabase;
 const supabasePublicKey =
   authConfig.supabaseAnonKey || authConfig.supabasePublishableKey || "";
+const authCacheKey = "vybe_auth_ui_cache";
 const defaultProdRedirectUrl = "https://www.vybevault.store/";
 const oauthRedirectUrl = (() => {
   const currentPageUrl = `${window.location.origin}${window.location.pathname}`;
@@ -202,6 +203,38 @@ const getAvatarUrl = (user) => {
   );
 };
 
+const readAuthCache = () => {
+  try {
+    const raw = localStorage.getItem(authCacheKey);
+    if (!raw) {
+      return null;
+    }
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== "object") {
+      return null;
+    }
+    return parsed;
+  } catch (_error) {
+    return null;
+  }
+};
+
+const writeAuthCache = (session, isAdmin) => {
+  try {
+    if (session?.user) {
+      localStorage.setItem(authCacheKey, JSON.stringify({
+        user: {
+          user_metadata: session.user.user_metadata || {},
+          email: session.user.email || null
+        },
+        isAdmin: Boolean(isAdmin)
+      }));
+      return;
+    }
+    localStorage.removeItem(authCacheKey);
+  } catch (_error) {}
+};
+
 const withTimeout = async (promise, timeoutMs, label) => {
   let timeoutId;
   const timeoutPromise = new Promise((_, reject) => {
@@ -238,17 +271,6 @@ const updateAuthUi = (session, isReady, isAdmin = false) => {
     return;
   }
 
-  if (!isReady) {
-    authButton.disabled = true;
-    authButton.textContent = "loading...";
-    authUserLabel.textContent = "checking session...";
-    if (authAvatar) {
-      authAvatar.classList.add("hidden");
-      authAvatar.removeAttribute("src");
-    }
-    return;
-  }
-
   authButton.disabled = false;
   if (session?.user) {
     const avatarUrl = getAvatarUrl(session.user);
@@ -282,13 +304,22 @@ const canInitAuth =
   supabasePublicKey.length > 20;
 
 if (authButton || authUserLabel) {
-  updateAuthUi(null, false);
+  const cached = readAuthCache();
+  const cachedSession = cached?.user ? { user: cached.user } : null;
+  updateAuthUi(cachedSession, true, Boolean(cached?.isAdmin));
 }
 
 if (canInitAuth) {
   const supabaseClient = supabaseFactory.createClient(
     authConfig.supabaseUrl,
-    supabasePublicKey
+    supabasePublicKey,
+    {
+      auth: {
+        persistSession: true,
+        autoRefreshToken: true,
+        detectSessionInUrl: true
+      }
+    }
   );
 
   let didResolveInitialAuth = false;
@@ -311,11 +342,11 @@ if (canInitAuth) {
         : false;
       currentAuthSession = data.session || null;
       updateAuthUi(data.session, true, isAdmin);
+      writeAuthCache(data.session, isAdmin);
       didResolveInitialAuth = true;
       return data.session;
     } catch (error) {
       console.error("Auth initialization failed:", error.message);
-      updateAuthUi(null, true);
       return null;
     }
   };
@@ -326,6 +357,7 @@ if (canInitAuth) {
       : false;
     currentAuthSession = session || null;
     updateAuthUi(session, true, isAdmin);
+    writeAuthCache(session, isAdmin);
     didResolveInitialAuth = true;
   });
 
@@ -334,8 +366,6 @@ if (canInitAuth) {
   // Prevent indefinite "loading..." if the auth request stalls.
   setTimeout(() => {
     if (!didResolveInitialAuth) {
-      updateAuthUi(null, true);
-      // Keep trying in background so UI can recover to signed-in if session resolves later.
       refreshAuthUi();
     }
   }, 10000);
@@ -362,6 +392,8 @@ if (canInitAuth) {
         const { error } = await supabaseClient.auth.signOut();
         if (error) {
           console.error("Logout failed:", error.message);
+        } else {
+          writeAuthCache(null, false);
         }
         return;
       }

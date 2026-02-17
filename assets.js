@@ -370,7 +370,14 @@ const initAssetsPage = async () => {
 
   supabaseClient = supabaseFactory.createClient(
     authConfig.supabaseUrl,
-    supabasePublicKey
+    supabasePublicKey,
+    {
+      auth: {
+        persistSession: true,
+        autoRefreshToken: true,
+        detectSessionInUrl: true
+      }
+    }
   );
 
   const applySessionState = async () => {
