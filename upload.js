@@ -82,7 +82,7 @@ const handleUploadSubmit = (supabaseClient, session) => async (event) => {
   const requiredTier = document.getElementById("upload-tier")?.value || "creator";
   const tagsText = document.getElementById("upload-tags")?.value || "";
   const uploadFileInput = document.getElementById("upload-file");
-  const publishChecked = document.getElementById("upload-published")?.checked ?? true;
+  const publishChecked = true;
 
   const file = uploadFileInput?.files?.[0];
   if (!title || !file) {
@@ -127,9 +127,12 @@ const handleUploadSubmit = (supabaseClient, session) => async (event) => {
     return;
   }
 
-  uploadStatus.textContent = "Asset uploaded successfully.";
+  uploadStatus.textContent = "Asset uploaded successfully. Redirecting...";
   uploadForm.reset();
   uploadSubmitBtn.disabled = false;
+  setTimeout(() => {
+    window.location.href = "assets.html?uploaded=1";
+  }, 700);
 };
 
 const initUploadPage = async () => {

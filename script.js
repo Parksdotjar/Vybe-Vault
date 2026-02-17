@@ -372,6 +372,18 @@ if (canInitAuth) {
 
   if (authButton) {
     authButton.addEventListener("click", async () => {
+      const wantsLogout = authButton.textContent.trim().toLowerCase() === "logout";
+      if (wantsLogout) {
+        const { error } = await supabaseClient.auth.signOut();
+        if (error) {
+          console.error("Logout failed:", error.message);
+        }
+        currentAuthSession = null;
+        writeAuthCache(null, false);
+        updateAuthUi(null, true);
+        return;
+      }
+
       let session = currentAuthSession;
 
       if (!session) {
@@ -395,6 +407,8 @@ if (canInitAuth) {
         } else {
           writeAuthCache(null, false);
         }
+        currentAuthSession = null;
+        updateAuthUi(null, true);
         return;
       }
 

@@ -32,6 +32,8 @@ let currentUserTier = null;
 let isAdmin = false;
 let activeTag = "all";
 let allAssets = [];
+const urlParams = new URLSearchParams(window.location.search);
+const uploadedFlag = urlParams.get("uploaded") === "1";
 
 const readAuthCache = () => {
   try {
@@ -285,14 +287,16 @@ const loadAssets = async () => {
   let data;
   let error;
   try {
-    const result = await withTimeout(
-      supabaseClient
-        .from("assets")
-        .select("id,title,description,required_tier,tags,storage_object_path,is_published,created_at")
-        .order("created_at", { ascending: false }),
-      9000,
-      "assets query"
-    );
+    let query = supabaseClient
+      .from("assets")
+      .select("id,title,description,required_tier,tags,storage_object_path,is_published,created_at")
+      .order("created_at", { ascending: false });
+
+    if (!isAdmin) {
+      query = query.eq("is_published", true);
+    }
+
+    const result = await withTimeout(query, 9000, "assets query");
     data = result.data;
     error = result.error;
   } catch (_err) {
@@ -321,7 +325,7 @@ const handleUploadSubmit = async (event) => {
   const requiredTier = document.getElementById("upload-tier")?.value || "creator";
   const tagsText = document.getElementById("upload-tags")?.value || "";
   const uploadFileInput = document.getElementById("upload-file");
-  const publishChecked = document.getElementById("upload-published")?.checked ?? true;
+  const publishChecked = true;
 
   const file = uploadFileInput?.files?.[0];
   if (!title || !file) {
@@ -449,6 +453,14 @@ const initAssetsPage = async () => {
     currentSession = session;
     await applySessionState();
   });
+
+  if (uploadedFlag) {
+    setStatus("Upload complete. Refreshing assets...");
+    setTimeout(() => {
+      loadAssets();
+      history.replaceState({}, "", window.location.pathname);
+    }, 1200);
+  }
 };
 
 initAssetsPage();
