@@ -287,6 +287,7 @@ if (canInitAuth) {
   );
 
   let didResolveInitialAuth = false;
+  let currentAuthSession = null;
 
   const refreshAuthUi = async () => {
     try {
@@ -303,6 +304,7 @@ if (canInitAuth) {
       const isAdmin = data.session?.user
         ? await getAdminStatus(supabaseClient, data.session.user.id)
         : false;
+      currentAuthSession = data.session || null;
       updateAuthUi(data.session, true, isAdmin);
       didResolveInitialAuth = true;
       return data.session;
@@ -317,6 +319,7 @@ if (canInitAuth) {
     const isAdmin = session?.user
       ? await getAdminStatus(supabaseClient, session.user.id)
       : false;
+    currentAuthSession = session || null;
     updateAuthUi(session, true, isAdmin);
     didResolveInitialAuth = true;
   });
@@ -332,8 +335,23 @@ if (canInitAuth) {
 
   if (authButton) {
     authButton.addEventListener("click", async () => {
-      const { data } = await supabaseClient.auth.getSession();
-      if (data.session) {
+      let session = currentAuthSession;
+
+      if (!session) {
+        try {
+          const { data } = await withTimeout(
+            supabaseClient.auth.getSession(),
+            3500,
+            "click getSession"
+          );
+          session = data?.session || null;
+          currentAuthSession = session;
+        } catch (_err) {
+          session = null;
+        }
+      }
+
+      if (session) {
         const { error } = await supabaseClient.auth.signOut();
         if (error) {
           console.error("Logout failed:", error.message);
@@ -350,6 +368,7 @@ if (canInitAuth) {
 
       if (error) {
         console.error("Discord login failed:", error.message);
+        alert(`Discord login failed: ${error.message}`);
       }
     });
   }
