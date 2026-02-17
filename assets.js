@@ -69,6 +69,14 @@ const setStatus = (message) => {
   }
 };
 
+const updateTierLabel = () => {
+  if (!currentTierLabel) {
+    return;
+  }
+  const tier = currentUserTier ? formatTier(currentUserTier) : "none";
+  currentTierLabel.textContent = `tier: ${tier}${isAdmin ? " | admin" : ""}`;
+};
+
 const getTagsFromText = (text) => {
   return [...new Set(
     String(text || "")
@@ -365,6 +373,17 @@ const initAssetsPage = async () => {
     supabasePublicKey
   );
 
+  const applySessionState = async () => {
+    currentUserTier = await getUserTier();
+    isAdmin = await getAdminStatus();
+    updateTierLabel();
+    if (adminUploadWrap) {
+      adminUploadWrap.hidden = !isAdmin;
+    }
+    await loadAssets();
+  };
+
+  let didResolveInitialSession = false;
   try {
     const { data } = await withTimeout(
       supabaseClient.auth.getSession(),
@@ -372,19 +391,21 @@ const initAssetsPage = async () => {
       "auth session"
     );
     currentSession = data?.session || null;
+    didResolveInitialSession = true;
   } catch (_err) {
     currentSession = null;
   }
-  currentUserTier = await getUserTier();
-  isAdmin = await getAdminStatus();
 
-  if (currentTierLabel) {
-    const tier = currentUserTier ? formatTier(currentUserTier) : "none";
-    currentTierLabel.textContent = `tier: ${tier}${isAdmin ? " | admin" : ""}`;
-  }
-
-  if (adminUploadWrap) {
-    adminUploadWrap.hidden = !isAdmin;
+  if (didResolveInitialSession) {
+    await applySessionState();
+  } else {
+    updateTierLabel();
+    await loadAssets();
+    // Recover from late auth responses after timeout instead of staying signed out forever.
+    supabaseClient.auth.getSession().then(async ({ data }) => {
+      currentSession = data?.session || null;
+      await applySessionState();
+    }).catch(() => {});
   }
 
   if (assetSearchInput) {
@@ -395,20 +416,9 @@ const initAssetsPage = async () => {
     uploadForm.addEventListener("submit", handleUploadSubmit);
   }
 
-  await loadAssets();
-
   supabaseClient.auth.onAuthStateChange(async (_event, session) => {
     currentSession = session;
-    currentUserTier = await getUserTier();
-    isAdmin = await getAdminStatus();
-    if (currentTierLabel) {
-      const tier = currentUserTier ? formatTier(currentUserTier) : "none";
-      currentTierLabel.textContent = `tier: ${tier}${isAdmin ? " | admin" : ""}`;
-    }
-    if (adminUploadWrap) {
-      adminUploadWrap.hidden = !isAdmin;
-    }
-    await loadAssets();
+    await applySessionState();
   });
 };
 

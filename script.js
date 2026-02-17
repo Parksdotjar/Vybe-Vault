@@ -155,11 +155,16 @@ const supabasePublicKey =
   authConfig.supabaseAnonKey || authConfig.supabasePublishableKey || "";
 const defaultProdRedirectUrl = "https://www.vybevault.store/";
 const oauthRedirectUrl = (() => {
-  if (typeof authConfig.redirectUrl === "string" && authConfig.redirectUrl.startsWith("http")) {
-    return authConfig.redirectUrl;
+  const currentPageUrl = `${window.location.origin}${window.location.pathname}`;
+  const isVybeProdHost = window.location.hostname === "www.vybevault.store" || window.location.hostname === "vybevault.store";
+  if (isVybeProdHost && window.location.protocol === "https:") {
+    return currentPageUrl;
   }
   if (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1") {
-    return `${window.location.origin}${window.location.pathname}`;
+    return currentPageUrl;
+  }
+  if (typeof authConfig.redirectUrl === "string" && authConfig.redirectUrl.startsWith("http")) {
+    return authConfig.redirectUrl;
   }
   return defaultProdRedirectUrl;
 })();
@@ -330,6 +335,8 @@ if (canInitAuth) {
   setTimeout(() => {
     if (!didResolveInitialAuth) {
       updateAuthUi(null, true);
+      // Keep trying in background so UI can recover to signed-in if session resolves later.
+      refreshAuthUi();
     }
   }, 10000);
 
