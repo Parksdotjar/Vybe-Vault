@@ -12,7 +12,7 @@
 </head>
 <body>
   <div id="build-counter" style="position:fixed;top:10px;right:10px;padding:6px 10px;border-radius:999px;border:1px solid rgba(255,255,255,0.2);background:rgba(7,10,16,0.85);color:#cfd7e6;font:12px/1 'Space Grotesk',sans-serif;letter-spacing:0.04em;z-index:9999;">
-    BUILD v21
+    BUILD v22
   </div>
   <div class="bg-grid" aria-hidden="true"></div>
 
@@ -43,7 +43,7 @@
       <div class="admin-card">
         <h2>new asset</h2>
         <p class="section-copy" id="upload-gate-status">Checking admin access...</p>
-        <form id="asset-upload-form" class="upload-form" hidden action="#" onsubmit="return false;">
+        <form id="asset-upload-form" class="upload-form" action="#" onsubmit="return false;">
           <label>
             <span>Title</span>
             <input id="upload-title" type="text" required />
@@ -72,7 +72,7 @@
             <input id="upload-published" type="checkbox" checked />
             <span>Publish immediately</span>
           </label>
-          <button class="btn btn-primary" id="upload-submit-btn" type="submit">upload asset</button>
+          <button class="btn btn-primary" id="upload-submit-btn" type="button">upload asset</button>
         </form>
         <p id="upload-status" class="assets-status"></p>
       </div>
@@ -95,7 +95,7 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="auth-config.js"></script>
-  <script src="script.js?v=21"></script>
+  <script src="script.js?v=22"></script>
   <script>
     window.__uploadScriptLoaded = true;
     const authConfig = window.VYBE_AUTH_CONFIG || {};
@@ -203,10 +203,44 @@
       }
     };
 
-    const handleUploadSubmit = async (event) => {
-      event.preventDefault();
-      if (!uploadReady || !supabaseClient || !currentSession?.user?.id) {
-        uploadStatus.textContent = "Upload is not ready yet.";
+    const ensureAuthorizedForUpload = async () => {
+      if (!supabaseClient) {
+        return { ok: false, reason: "Supabase client not ready." };
+      }
+      try {
+        const { data } = await withTimeout(
+          supabaseClient.auth.getSession(),
+          12000,
+          "getSession"
+        );
+        currentSession = data?.session || null;
+      } catch (_error) {
+        return { ok: false, reason: "Session check timed out." };
+      }
+
+      if (!currentSession?.user?.id) {
+        return { ok: false, reason: "Not signed in." };
+      }
+
+      const isAdmin = await checkAdminAccess(currentSession.user.id);
+      if (!isAdmin) {
+        return { ok: false, reason: "This account is not an admin." };
+      }
+
+      return { ok: true };
+    };
+
+    const handleUploadSubmit = async () => {
+      if (!uploadStatus) {
+        return;
+      }
+      uploadStatus.textContent = "Checking account access...";
+      const authCheck = await ensureAuthorizedForUpload();
+      if (!authCheck.ok) {
+        uploadStatus.textContent = authCheck.reason;
+        if (authCheck.reason === "Not signed in.") {
+          redirectToAssets();
+        }
         return;
       }
 
@@ -287,8 +321,8 @@
     };
 
     const initUploadPage = async () => {
-      if (uploadForm) {
-        uploadForm.addEventListener("submit", handleUploadSubmit);
+      if (uploadSubmitBtn) {
+        uploadSubmitBtn.addEventListener("click", handleUploadSubmit);
       }
 
       const canInitAuth =
@@ -299,7 +333,7 @@
         supabasePublicKey.length > 20;
 
       if (!canInitAuth) {
-        redirectToAssets();
+        uploadStatus.textContent = "Auth config missing.";
         return;
       }
 
@@ -315,35 +349,20 @@
         }
       );
 
-      try {
-        const { data } = await withTimeout(
-          supabaseClient.auth.getSession(),
-          16000,
-          "getSession"
-        );
-        currentSession = data?.session || null;
-      } catch (_error) {
-        redirectToAssets();
+      const authCheck = await ensureAuthorizedForUpload();
+      if (authCheck.ok) {
+        uploadReady = true;
+        if (uploadGateStatus) {
+          uploadGateStatus.textContent = "Admin verified. Ready to upload.";
+        }
         return;
       }
 
-      if (!currentSession?.user?.id) {
-        redirectToAssets();
-        return;
-      }
-
-      const isAdmin = await checkAdminAccess(currentSession.user.id);
-      if (!isAdmin) {
-        redirectToAssets();
-        return;
-      }
-
-      uploadReady = true;
       if (uploadGateStatus) {
-        uploadGateStatus.textContent = "Admin verified. Ready to upload.";
+        uploadGateStatus.textContent = authCheck.reason;
       }
-      if (uploadForm) {
-        uploadForm.hidden = false;
+      if (authCheck.reason === "Not signed in.") {
+        redirectToAssets();
       }
     };
 
