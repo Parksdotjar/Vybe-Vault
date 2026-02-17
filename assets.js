@@ -7,6 +7,7 @@ const adminUploadWrap = document.getElementById("admin-upload-wrap");
 const uploadForm = document.getElementById("asset-upload-form");
 const uploadStatus = document.getElementById("upload-status");
 const uploadSubmitBtn = document.getElementById("upload-submit-btn");
+const authCacheKey = "vybe_auth_ui_cache";
 
 const authConfig = window.VYBE_AUTH_CONFIG || {};
 const supabaseFactory = window.supabase;
@@ -31,6 +32,22 @@ let currentUserTier = null;
 let isAdmin = false;
 let activeTag = "all";
 let allAssets = [];
+
+const readAuthCache = () => {
+  try {
+    const raw = localStorage.getItem(authCacheKey);
+    if (!raw) {
+      return null;
+    }
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== "object") {
+      return null;
+    }
+    return parsed;
+  } catch (_err) {
+    return null;
+  }
+};
 
 const withTimeout = async (promise, timeoutMs, label) => {
   let timeoutId;
@@ -379,6 +396,11 @@ const initAssetsPage = async () => {
       }
     }
   );
+
+  const cached = readAuthCache();
+  if (cached?.isAdmin && adminUploadWrap) {
+    adminUploadWrap.hidden = false;
+  }
 
   const applySessionState = async () => {
     currentUserTier = await getUserTier();
