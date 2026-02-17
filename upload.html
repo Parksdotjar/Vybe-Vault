@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Assets | VYBE VAULT</title>
-  <meta name="description" content="Browse and download VYBE VAULT assets by membership tier." />
+  <title>Upload | VYBE VAULT</title>
+  <meta name="description" content="Admin upload portal for VYBE VAULT assets." />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet" />
@@ -20,8 +20,8 @@
     <a class="brand" href="index.html">VYBE VAULT</a>
     <nav>
       <a href="index.html">home</a>
-      <a href="assets.html" class="active">assets</a>
-      <a href="upload.html">upload</a>
+      <a href="assets.html">assets</a>
+      <a href="upload.html" class="active">upload</a>
       <a href="pricing.html">pricing</a>
       <a href="tos.html">tos</a>
       <a href="privacy-policy.html">privacy</a>
@@ -34,25 +34,16 @@
 
   <main>
     <section class="section page-hero">
-      <p class="hero-kicker reveal">member library</p>
-      <h1 class="reveal">assets vault</h1>
-      <p class="hero-copy reveal">Search, filter by tags, and download what your tier unlocks.</p>
+      <p class="hero-kicker reveal">admin portal</p>
+      <h1 class="reveal">upload assets</h1>
+      <p class="hero-copy reveal">Only approved admin accounts can access this page.</p>
     </section>
 
-    <section class="section assets-tools reveal">
-      <div class="assets-toolbar">
-        <input id="asset-search" class="assets-search" type="search" placeholder="Search assets..." />
-        <span class="assets-tier" id="current-tier">tier: signed out</span>
-      </div>
-      <div id="tag-filters" class="tag-filters"></div>
-      <p id="assets-status" class="assets-status">Loading assets...</p>
-    </section>
-
-    <section class="section reveal" id="admin-upload-wrap" hidden>
+    <section class="section reveal">
       <div class="admin-card">
-        <h2>upload asset</h2>
-        <p class="section-copy">Only site admins can see and use this form.</p>
-        <form id="asset-upload-form" class="upload-form">
+        <h2>new asset</h2>
+        <p class="section-copy" id="upload-gate-status">Checking admin access...</p>
+        <form id="asset-upload-form" class="upload-form" hidden>
           <label>
             <span>Title</span>
             <input id="upload-title" type="text" required />
@@ -86,10 +77,6 @@
         <p id="upload-status" class="assets-status"></p>
       </div>
     </section>
-
-    <section class="section">
-      <div id="assets-grid" class="asset-grid"></div>
-    </section>
   </main>
 
   <footer class="site-footer">
@@ -99,6 +86,6 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="auth-config.js"></script>
   <script src="script.js?v=14"></script>
-  <script src="assets.js?v=14"></script>
+  <script src="upload.js?v=15"></script>
 </body>
 </html>
