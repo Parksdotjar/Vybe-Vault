@@ -8,11 +8,11 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="styles.css?v=8" />
+  <link rel="stylesheet" href="styles.css?v=9" />
 </head>
 <body>
   <div id="build-counter" style="position:fixed;top:10px;right:10px;padding:6px 10px;border-radius:999px;border:1px solid rgba(255,255,255,0.2);background:rgba(7,10,16,0.85);color:#cfd7e6;font:12px/1 'Space Grotesk',sans-serif;letter-spacing:0.04em;z-index:9999;">
-    BUILD v16
+    BUILD v17
   </div>
   <div class="bg-grid" aria-hidden="true"></div>
 
@@ -50,40 +50,9 @@
 
     <section class="section reveal" id="admin-upload-wrap" hidden>
       <div class="admin-card">
-        <h2>upload asset</h2>
-        <p class="section-copy">Only site admins can see and use this form.</p>
-        <form id="asset-upload-form" class="upload-form">
-          <label>
-            <span>Title</span>
-            <input id="upload-title" type="text" required />
-          </label>
-          <label>
-            <span>Description</span>
-            <textarea id="upload-description" rows="3" placeholder="Optional"></textarea>
-          </label>
-          <label>
-            <span>Required tier</span>
-            <select id="upload-tier">
-              <option value="creator">Creator</option>
-              <option value="creator_plus">Creator+</option>
-              <option value="creator_plus_plus">Creator++</option>
-            </select>
-          </label>
-          <label>
-            <span>Tags (comma separated)</span>
-            <input id="upload-tags" type="text" placeholder="overlay, transitions, cinematic" />
-          </label>
-          <label>
-            <span>Asset file</span>
-            <input id="upload-file" type="file" required />
-          </label>
-          <label class="publish-toggle">
-            <input id="upload-published" type="checkbox" checked />
-            <span>Publish immediately</span>
-          </label>
-          <button class="btn btn-primary" id="upload-submit-btn" type="submit">upload asset</button>
-        </form>
-        <p id="upload-status" class="assets-status"></p>
+        <h2>admin tools</h2>
+        <p class="section-copy">Use the dedicated upload portal for secure asset publishing.</p>
+        <p><a class="btn btn-primary" href="upload.html">open upload portal</a></p>
       </div>
     </section>
 
@@ -92,13 +61,21 @@
     </section>
   </main>
 
+  <div id="asset-preview-modal" class="preview-modal hidden" aria-hidden="true">
+    <div class="preview-modal-backdrop" data-close-preview="1"></div>
+    <div class="preview-modal-panel">
+      <button class="preview-close" type="button" data-close-preview="1">close</button>
+      <div id="asset-preview-body"></div>
+    </div>
+  </div>
+
   <footer class="site-footer">
     <p>&copy; <span id="year"></span> VYBE VAULT. all rights reserved.</p>
   </footer>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="auth-config.js"></script>
-  <script src="script.js?v=16"></script>
-  <script src="assets.js?v=16"></script>
+  <script src="script.js?v=17"></script>
+  <script src="assets.js?v=17"></script>
 </body>
 </html>

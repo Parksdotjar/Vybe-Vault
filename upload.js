@@ -7,6 +7,14 @@ const uploadForm = document.getElementById("asset-upload-form");
 const uploadStatus = document.getElementById("upload-status");
 const uploadGateStatus = document.getElementById("upload-gate-status");
 const uploadSubmitBtn = document.getElementById("upload-submit-btn");
+const uploadOverlay = document.getElementById("upload-overlay");
+const uploadOverlayText = document.getElementById("upload-overlay-text");
+const uploadProgressBar = document.getElementById("upload-progress-bar");
+const uploadProgressPct = document.getElementById("upload-progress-pct");
+
+let supabaseClient = null;
+let currentSession = null;
+let uploadReady = false;
 
 const redirectToAssets = () => {
   window.location.replace("assets.html");
@@ -15,9 +23,7 @@ const redirectToAssets = () => {
 const withTimeout = async (promise, timeoutMs, label) => {
   let timeoutId;
   const timeoutPromise = new Promise((_, reject) => {
-    timeoutId = setTimeout(() => {
-      reject(new Error(`${label} timed out`));
-    }, timeoutMs);
+    timeoutId = setTimeout(() => reject(new Error(`${label} timed out`)), timeoutMs);
   });
   try {
     return await Promise.race([promise, timeoutPromise]);
@@ -43,37 +49,64 @@ const getTagsFromText = (text) => {
   )];
 };
 
-const checkAdminAccess = async (supabaseClient, userId) => {
-  if (!userId) {
+const setOverlay = (percent, text) => {
+  if (uploadProgressBar) {
+    uploadProgressBar.style.width = `${Math.max(0, Math.min(100, percent))}%`;
+  }
+  if (uploadProgressPct) {
+    uploadProgressPct.textContent = `${Math.round(percent)}%`;
+  }
+  if (uploadOverlayText) {
+    uploadOverlayText.textContent = text;
+  }
+};
+
+const openOverlay = () => {
+  if (uploadOverlay) {
+    uploadOverlay.classList.remove("hidden");
+  }
+  document.body.classList.add("uploading");
+};
+
+const closeOverlay = () => {
+  if (uploadOverlay) {
+    uploadOverlay.classList.add("hidden");
+  }
+  document.body.classList.remove("uploading");
+};
+
+const checkAdminAccess = async (userId) => {
+  if (!userId || !supabaseClient) {
     return false;
   }
-
   const configuredAdminId =
     typeof authConfig.adminUserId === "string" ? authConfig.adminUserId.trim() : "";
   if (configuredAdminId && configuredAdminId === userId) {
     return true;
   }
-
-  const { data, error } = await withTimeout(
-    supabaseClient
-      .from("site_admins")
-      .select("user_id")
-      .eq("user_id", userId)
-      .maybeSingle(),
-    9000,
-    "admin check"
-  );
-
-  if (error) {
+  try {
+    const { data, error } = await withTimeout(
+      supabaseClient
+        .from("site_admins")
+        .select("user_id")
+        .eq("user_id", userId)
+        .maybeSingle(),
+      12000,
+      "admin check"
+    );
+    if (error) {
+      return false;
+    }
+    return Boolean(data?.user_id);
+  } catch (_err) {
     return false;
   }
-  return Boolean(data?.user_id);
 };
 
-const handleUploadSubmit = (supabaseClient, session) => async (event) => {
+const handleUploadSubmit = async (event) => {
   event.preventDefault();
-  if (!session?.user?.id) {
-    redirectToAssets();
+  if (!uploadReady || !supabaseClient || !currentSession?.user?.id) {
+    uploadStatus.textContent = "Upload is not ready yet.";
     return;
   }
 
@@ -82,9 +115,8 @@ const handleUploadSubmit = (supabaseClient, session) => async (event) => {
   const requiredTier = document.getElementById("upload-tier")?.value || "creator";
   const tagsText = document.getElementById("upload-tags")?.value || "";
   const uploadFileInput = document.getElementById("upload-file");
-  const publishChecked = true;
-
   const file = uploadFileInput?.files?.[0];
+
   if (!title || !file) {
     uploadStatus.textContent = "Title and file are required.";
     return;
@@ -97,45 +129,68 @@ const handleUploadSubmit = (supabaseClient, session) => async (event) => {
   const tags = getTagsFromText(tagsText);
 
   uploadSubmitBtn.disabled = true;
-  uploadStatus.textContent = "Uploading...";
+  uploadStatus.textContent = "";
+  openOverlay();
+  setOverlay(4, "Preparing upload...");
 
-  const uploadResult = await supabaseClient.storage
-    .from("asset-files")
-    .upload(objectPath, file, { upsert: false });
+  let progress = 4;
+  const progressTimer = setInterval(() => {
+    progress = Math.min(progress + Math.random() * 6, 82);
+    setOverlay(progress, "Uploading file...");
+  }, 220);
 
-  if (uploadResult.error) {
-    uploadStatus.textContent = `Upload failed: ${uploadResult.error.message}`;
-    uploadSubmitBtn.disabled = false;
-    return;
+  try {
+    const uploadResult = await supabaseClient.storage
+      .from("asset-files")
+      .upload(objectPath, file, { upsert: false });
+
+    clearInterval(progressTimer);
+    if (uploadResult.error) {
+      throw new Error(uploadResult.error.message);
+    }
+
+    setOverlay(88, "Saving asset record...");
+    const insertResult = await supabaseClient
+      .from("assets")
+      .insert({
+        slug,
+        title,
+        description,
+        required_tier: requiredTier,
+        tags,
+        storage_object_path: objectPath,
+        is_published: true
+      });
+
+    if (insertResult.error) {
+      throw new Error(insertResult.error.message);
+    }
+
+    setOverlay(100, "Uploaded");
+    uploadStatus.textContent = "Asset uploaded successfully.";
+    uploadForm.reset();
+
+    setTimeout(() => {
+      closeOverlay();
+      uploadSubmitBtn.disabled = false;
+      uploadStatus.textContent = "";
+    }, 1500);
+  } catch (error) {
+    clearInterval(progressTimer);
+    setOverlay(100, "Upload failed");
+    uploadStatus.textContent = `Upload failed: ${error.message}`;
+    setTimeout(() => {
+      closeOverlay();
+      uploadSubmitBtn.disabled = false;
+    }, 900);
   }
-
-  const insertResult = await supabaseClient
-    .from("assets")
-    .insert({
-      slug,
-      title,
-      description,
-      required_tier: requiredTier,
-      tags,
-      storage_object_path: objectPath,
-      is_published: publishChecked
-    });
-
-  if (insertResult.error) {
-    uploadStatus.textContent = `Saved file but failed to create asset row: ${insertResult.error.message}`;
-    uploadSubmitBtn.disabled = false;
-    return;
-  }
-
-  uploadStatus.textContent = "Asset uploaded successfully. Redirecting...";
-  uploadForm.reset();
-  uploadSubmitBtn.disabled = false;
-  setTimeout(() => {
-    window.location.href = "assets.html?uploaded=1";
-  }, 700);
 };
 
 const initUploadPage = async () => {
+  if (uploadForm) {
+    uploadForm.addEventListener("submit", handleUploadSubmit);
+  }
+
   const canInitAuth =
     typeof supabaseFactory?.createClient === "function" &&
     typeof authConfig.supabaseUrl === "string" &&
@@ -148,7 +203,7 @@ const initUploadPage = async () => {
     return;
   }
 
-  const supabaseClient = supabaseFactory.createClient(
+  supabaseClient = supabaseFactory.createClient(
     authConfig.supabaseUrl,
     supabasePublicKey,
     {
@@ -160,36 +215,35 @@ const initUploadPage = async () => {
     }
   );
 
-  let session = null;
   try {
     const { data } = await withTimeout(
       supabaseClient.auth.getSession(),
-      10000,
+      16000,
       "getSession"
     );
-    session = data?.session || null;
+    currentSession = data?.session || null;
   } catch (_error) {
     redirectToAssets();
     return;
   }
 
-  if (!session?.user?.id) {
+  if (!currentSession?.user?.id) {
     redirectToAssets();
     return;
   }
 
-  const isAdmin = await checkAdminAccess(supabaseClient, session.user.id);
+  const isAdmin = await checkAdminAccess(currentSession.user.id);
   if (!isAdmin) {
     redirectToAssets();
     return;
   }
 
+  uploadReady = true;
   if (uploadGateStatus) {
-    uploadGateStatus.textContent = "Admin verified.";
+    uploadGateStatus.textContent = "Admin verified. Ready to upload.";
   }
   if (uploadForm) {
     uploadForm.hidden = false;
-    uploadForm.addEventListener("submit", handleUploadSubmit(supabaseClient, session));
   }
 };
 
